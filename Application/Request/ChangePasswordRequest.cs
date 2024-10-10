@@ -12,11 +12,6 @@ namespace Application.Request
         public string CurrentPassword { get; }
         public string NewPassword { get; }
 
-        public ChangePasswordRequest(string emailOrPhone, string currentPassword, string newPassword)
-        {
-            EmailOrPhone = emailOrPhone;
-            CurrentPassword = currentPassword;
-            NewPassword = newPassword;
-        }
+
     }
 }

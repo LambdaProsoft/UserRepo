@@ -49,7 +49,7 @@ namespace User.API.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        public async Task<IActionResult> Login([FromBody] UserLoginRequest request)
         {
             var token = await _userService.UserLogin(request.Email, request.Password);
             if (token == null)

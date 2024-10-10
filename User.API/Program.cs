@@ -6,6 +6,9 @@ using Infrastructure.Command;
 using Microsoft.EntityFrameworkCore;
 using UserInfrastructure.Persistence;
 using UserInfrastructure.Query;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +22,29 @@ builder.Services.AddSwaggerGen();
 var connectionString = builder.Configuration["ConnectionString"];
 builder.Services.AddDbContext<UserContext>(options => options.UseSqlServer(connectionString));
 
+//jwt conf
+
+var secretKey = builder.Configuration.GetValue<string>("Jwt:Key");
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false;
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+        ValidateIssuer = false,
+        ValidateAudience = false
+    };
+});
+
+
 //injection dependecy
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 
@@ -27,7 +53,12 @@ builder.Services.AddScoped<IUserCommand, UserCommand>();
 builder.Services.AddScoped<IUserQuery, UserQuery>();
 builder.Services.AddScoped<IUserMapper, UserMapper>();
 
-
+builder.Services.AddScoped<IJwtService, JwtService>(provider =>
+{
+    var config = provider.GetRequiredService<IConfiguration>();
+    var key = config.GetValue<string>("Jwt:Key");
+    return new JwtService(key);
+});
 
 var app = builder.Build();
 
@@ -37,6 +68,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+//agregado
+app.UseAuthentication();
+app.UseRouting();
+
 
 app.UseHttpsRedirection();
 
