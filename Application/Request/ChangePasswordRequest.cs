@@ -8,10 +8,9 @@ namespace Application.Request
 {
     public class ChangePasswordRequest
     {
-        public string EmailOrPhone { get; }
-        public string CurrentPassword { get; }
-        public string NewPassword { get; }
-
+        public string EmailOrPhone { get; set; }
+        public string CurrentPassword { get; set; }
+        public string NewPassword { get; set; }
 
     }
 }
