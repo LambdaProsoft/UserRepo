@@ -57,7 +57,7 @@ namespace Application.UseCases
             return await _userMapper.GetUserResponse(userRetrived);
 
         }
-        public async Task<string> UserLogin(string email, string password)
+        public async Task<TokenResponse> UserLogin(string email, string password)
         {
             var user = await _userQuery.GetUserEmail(email);
             if (user == null || !_passwordService.VerifyPassword(password, user.Password))
@@ -65,35 +65,61 @@ namespace Application.UseCases
                 return null; // Credenciales incorrectas
             }
 
-            // Generar el token JWT si las credenciales son correctas
-            var token = _jwtService.GenerateAccessToken(user.Id, user.Email);
+            // Generar el Access Token si las credenciales son correctas
+            var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email);
 
-            return token;
+            // Generar el Refresh Token
+            var refreshToken = _jwtService.GenerateRefreshToken();
+
+            // Guardar el Refresh Token en la base de datos
+            await _userCommand.UpdateRefreshToken(user.Id, refreshToken);
+
+            // Devolver ambos tokens en la respuesta
+            return new TokenResponse
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken
+            };
         }
+
         public async Task<TokenResponse> RefreshToken(string accessToken, string refreshToken)
         {
+            // Obtener los claims del accessToken (incluso si está expirado)
             var principal = _jwtService.GetPrincipalFromExpiredToken(accessToken);
             var userId = int.Parse(principal.FindFirst(ClaimTypes.NameIdentifier)?.Value);
 
-            // Validar si el refresh token es correcto
+            // Validar si el refresh token almacenado en la base de datos es correcto
             var storedRefreshToken = await _userQuery.GetRefreshToken(userId, refreshToken);
-            if (storedRefreshToken == null || storedRefreshToken.ExpirationDate < DateTime.UtcNow)
+            if (storedRefreshToken == null)
             {
-                return null; // Token inválido o expirado
+                // Token no encontrado
+                throw new UnauthorizedAccessException("Refresh token is invalid.");
             }
 
+            if (storedRefreshToken.ExpirationDate < DateTime.UtcNow)
+            {
+                // Token expirado
+                throw new UnauthorizedAccessException("Refresh token has expired.");
+            }
+
+            // Aquí podrías agregar más validaciones si es necesario, como:
+            // - Validar que el usuario sigue activo (ejemplo: !user.Deleted)
+
+            // Generar un nuevo access token y refresh token
             var newAccessToken = _jwtService.GenerateAccessToken(userId, principal.FindFirst(ClaimTypes.Email)?.Value);
             var newRefreshToken = _jwtService.GenerateRefreshToken();
 
-            // Actualizar el refresh token en base de datos
+            // Actualizar el refresh token en la base de datos
             await _userCommand.UpdateRefreshToken(userId, newRefreshToken);
 
+            // Devolver la nueva combinación de tokens
             return new TokenResponse
             {
                 AccessToken = newAccessToken,
                 RefreshToken = newRefreshToken
             };
         }
+
         public async Task<ChangePasswordResponse> ChangePassword(ChangePasswordRequest command)
         {
             // Buscar al usuario por Email o Phone

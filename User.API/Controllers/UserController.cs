@@ -51,25 +51,46 @@ namespace User.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] UserLoginRequest request)
         {
-            var tokenResponse = await _userService.UserLogin(request.Email, request.Password);
-            if (tokenResponse == null)
+            try
             {
-                return Unauthorized(new { message = "Invalid credentials" });
-            }
+                // El método UserLogin ahora devuelve tanto el access token como el refresh token
+                var tokenResponse = await _userService.UserLogin(request.Email, request.Password);
+                if (tokenResponse == null)
+                {
+                    return Unauthorized(new { message = "Invalid credentials" });
+                }
 
-            return Ok(tokenResponse);
+                // Retornar la respuesta con los tokens
+                return Ok(tokenResponse);
+            }
+            catch (Exception ex)
+            {
+                // Puedes manejar otras excepciones si es necesario
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
+            }
         }
 
         [HttpPost("refresh-token")]
         public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
         {
-            var tokenResponse = await _userService.RefreshToken(request.AccessToken, request.RefreshToken);
-            if (tokenResponse == null)
+            try
             {
-                return Unauthorized(new { message = "Invalid token" });
-            }
+                // Llama al servicio para refrescar el token
+                var tokenResponse = await _userService.RefreshToken(request.AccessToken, request.RefreshToken);
 
-            return Ok(tokenResponse);
+                // En este punto, las excepciones de token inválido o expirado se manejan en el servicio
+                return Ok(tokenResponse);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                // Si hay un problema con la validez del refresh token o el access token
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Para cualquier otra excepción, devuelve un error 500
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
+            }
         }
 
         [HttpPut("change-password")]
