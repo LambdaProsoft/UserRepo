@@ -2,6 +2,7 @@
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Application.UseCases
@@ -9,30 +10,72 @@ namespace Application.UseCases
     public class JwtService : IJwtService
     {
         private readonly string _secretKey;
+        private readonly int _accessTokenExpirationMinutes;
+        private readonly int _refreshTokenExpirationDays;
 
-        public JwtService(string secretKey)
+        public JwtService(string secretKey, int accessTokenExpirationMinutes, int refreshTokenExpirationDays)
         {
             _secretKey = secretKey;
+            _accessTokenExpirationMinutes = accessTokenExpirationMinutes;
+            _refreshTokenExpirationDays = refreshTokenExpirationDays;
         }
 
-        public string GenerateJwtToken(int userId, string email)
+        // Genera el access token (corto plazo)
+        public string GenerateAccessToken(int userId, string email)
         {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_secretKey);
-
-            var tokenDescriptor = new SecurityTokenDescriptor
+            var claims = new[]
             {
-                Subject = new ClaimsIdentity(new[]
-                {
-                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-                new Claim(ClaimTypes.Email, email)
-            }),
-                Expires = DateTime.UtcNow.AddHours(1), // El token expira en 1 hora
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
+            new Claim(JwtRegisteredClaimNames.Email, email),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(
+                issuer: "yourIssuer",
+                audience: "yourAudience",
+                claims: claims,
+                expires: DateTime.Now.AddMinutes(_accessTokenExpirationMinutes),
+                signingCredentials: creds
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        // Genera el refresh token (largo plazo)
+        public string GenerateRefreshToken()
+        {
+            var randomNumber = new byte[32];
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(randomNumber);
+                return Convert.ToBase64String(randomNumber);
+            }
+        }
+
+        // Valida un token expirado y recupera los claims
+        public ClaimsPrincipal GetPrincipalFromExpiredToken(string token)
+        {
+            var tokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = false, // Desactivar la validación del tiempo de expiración
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = "yourIssuer",
+                ValidAudience = "yourAudience",
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secretKey))
             };
 
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out var securityToken);
+
+            if (!(securityToken is JwtSecurityToken jwtToken) || !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+                throw new SecurityTokenException("Invalid token");
+
+            return principal;
         }
     }
 }

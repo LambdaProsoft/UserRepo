@@ -16,5 +16,8 @@
         public int Phone { get; set; }
         public bool Deleted { get; set; } = false;
 
+
+        public ICollection<RefreshToken> RefreshTokens { get; set; }
+
     }
 }

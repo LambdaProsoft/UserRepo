@@ -45,5 +45,25 @@ namespace Infrastructure.Command
             await _context.SaveChangesAsync();
             return user;
         }
+
+        public async Task UpdateRefreshToken(int userId, string newRefreshToken)
+        {
+            var tokenEntity = await _context.RefreshTokens
+                .Where(t => t.UserId == userId)
+                .FirstOrDefaultAsync();
+
+            if (tokenEntity != null)
+            {
+                tokenEntity.Token = newRefreshToken;
+                tokenEntity.ExpirationDate = DateTime.UtcNow.AddDays(30); // Actualizar la fecha de expiración
+
+                _context.RefreshTokens.Update(tokenEntity);
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                throw new Exception("No se encontró el Refresh Token para este usuario.");
+            }
+        }
     }
 }

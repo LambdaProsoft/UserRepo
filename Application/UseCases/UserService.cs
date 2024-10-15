@@ -4,6 +4,7 @@ using Application.Interfaces;
 using Application.Mappers.IMappers;
 using Application.Request;
 using Application.Response;
+using System.Security.Claims;
 
 namespace Application.UseCases
 {
@@ -65,9 +66,33 @@ namespace Application.UseCases
             }
 
             // Generar el token JWT si las credenciales son correctas
-            var token = _jwtService.GenerateJwtToken(user.Id, user.Email);
+            var token = _jwtService.GenerateAccessToken(user.Id, user.Email);
 
             return token;
+        }
+        public async Task<TokenResponse> RefreshToken(string accessToken, string refreshToken)
+        {
+            var principal = _jwtService.GetPrincipalFromExpiredToken(accessToken);
+            var userId = int.Parse(principal.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+
+            // Validar si el refresh token es correcto
+            var storedRefreshToken = await _userQuery.GetRefreshToken(userId, refreshToken);
+            if (storedRefreshToken == null || storedRefreshToken.ExpirationDate < DateTime.UtcNow)
+            {
+                return null; // Token inválido o expirado
+            }
+
+            var newAccessToken = _jwtService.GenerateAccessToken(userId, principal.FindFirst(ClaimTypes.Email)?.Value);
+            var newRefreshToken = _jwtService.GenerateRefreshToken();
+
+            // Actualizar el refresh token en base de datos
+            await _userCommand.UpdateRefreshToken(userId, newRefreshToken);
+
+            return new TokenResponse
+            {
+                AccessToken = newAccessToken,
+                RefreshToken = newRefreshToken
+            };
         }
         public async Task<ChangePasswordResponse> ChangePassword(ChangePasswordRequest command)
         {

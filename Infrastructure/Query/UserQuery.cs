@@ -46,5 +46,19 @@ namespace UserInfrastructure.Query
             }
 
         }
+
+        public async Task<RefreshToken> GetRefreshToken(int userId, string refreshToken)
+        {
+            var tokenEntity = await _context.RefreshTokens
+                .Where(t => t.UserId == userId && t.Token == refreshToken)
+                .FirstOrDefaultAsync();
+
+            if (tokenEntity == null)
+            {
+                throw new Exception("Refresh Token no encontrado o inválido.");
+            }
+
+            return tokenEntity;
+        }
     }
 }

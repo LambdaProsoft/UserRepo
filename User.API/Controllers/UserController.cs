@@ -51,13 +51,25 @@ namespace User.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] UserLoginRequest request)
         {
-            var token = await _userService.UserLogin(request.Email, request.Password);
-            if (token == null)
+            var tokenResponse = await _userService.UserLogin(request.Email, request.Password);
+            if (tokenResponse == null)
             {
                 return Unauthorized(new { message = "Invalid credentials" });
             }
 
-            return Ok(new { token });
+            return Ok(tokenResponse);
+        }
+
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
+        {
+            var tokenResponse = await _userService.RefreshToken(request.AccessToken, request.RefreshToken);
+            if (tokenResponse == null)
+            {
+                return Unauthorized(new { message = "Invalid token" });
+            }
+
+            return Ok(tokenResponse);
         }
 
         [HttpPut("change-password")]

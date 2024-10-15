@@ -57,7 +57,10 @@ builder.Services.AddScoped<IJwtService, JwtService>(provider =>
 {
     var config = provider.GetRequiredService<IConfiguration>();
     var key = config.GetValue<string>("Jwt:Key");
-    return new JwtService(key);
+    var accessTokenExpirationMinutes = config.GetValue<int>("Jwt:AccessTokenExpirationMinutes");
+    var refreshTokenExpirationDays = config.GetValue<int>("Jwt:RefreshTokenExpirationDays");
+
+    return new JwtService(key, accessTokenExpirationMinutes, refreshTokenExpirationDays);
 });
 
 var app = builder.Build();
