@@ -4,6 +4,8 @@ using Application.Interfaces;
 using Application.Request;
 using Application.Response;
 using Microsoft.AspNetCore.Identity.Data;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 
 namespace User.API.Controllers
@@ -69,6 +71,33 @@ namespace User.API.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
             }
         }
+
+        [HttpGet("profile")]
+        [Authorize] // Requiere autenticación con token JWT
+        [ProducesResponseType(typeof(UserPersonalInfoResponse), 200)]
+        [ProducesResponseType(typeof(ApiError), 400)]
+        public async Task<IActionResult> GetUserProfile()
+        {
+            try
+            {
+                // Extraer el ID del usuario autenticado del token JWT
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+
+                // Obtener la información del usuario
+                var result = await _userService.GetUserPersonalInfo(userId);
+                return Ok(result);
+            }
+            catch (ExceptionNotFound ex)
+            {
+                return NotFound(new ApiError { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new ApiError { Message = ex.Message });
+            }
+        }
+
+
 
         [HttpPost("refresh-token")]
         public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)

@@ -57,6 +57,34 @@ namespace Application.UseCases
             return await _userMapper.GetUserResponse(userRetrived);
 
         }
+
+        public async Task<UserPersonalInfoResponse> GetUserPersonalInfo(int userId)
+        {
+            // Verificar si el usuario existe
+            await CheckUserId(userId);
+
+            // Obtener el usuario por su ID
+            var user = await _userQuery.GetUserById(userId);
+
+            // Mapear la información a una respuesta que incluya todos los detalles personales
+            var response = new UserPersonalInfoResponse
+            {
+                Name = user.Name,
+                LastName = user.LastName,
+                DNI = user.DNI,
+                Phone = user.Phone,
+                Email = user.Email,
+                Country = user.Country,
+                City = user.City,
+                Address = user.Address,
+                BirthDate = user.BirthDate,
+
+            };
+
+            return response;
+        }
+
+
         public async Task<TokenResponse> UserLogin(string email, string password)
         {
             var user = await _userQuery.GetUserEmail(email);
