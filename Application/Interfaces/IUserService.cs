@@ -7,10 +7,11 @@ namespace Application.Interfaces
     {
         Task<UserResponse> DeleteUser(int userId);
         Task<UserResponse> CreateUser(UserRequest user);
-        Task<TokenResponse> UserLogin(string email, string password);
         Task<ChangePasswordResponse> ChangePassword(ChangePasswordRequest command);
         public Task<TokenResponse> RefreshToken(string accessToken, string refreshToken);
         Task<UserResponse> UpdateUser(int userId, UserUpdateRequest userRequest);
         Task<UserResponse> GetUserById(int id);
+        Task<bool> UserLogin(string email, string password);
+        Task<TokenResponse> VerifyCode(string email, string verificationCode);
     }
 }

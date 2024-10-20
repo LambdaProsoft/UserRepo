@@ -21,7 +21,6 @@ namespace Application.Mappers
                 LastLogin = user.LastLogin,
                 LastName = user.LastName,
                 Name = user.Name,
-                Password = user.Password,
                 Phone = user.Phone,
             };
             return Task.FromResult(response);

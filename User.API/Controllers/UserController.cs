@@ -53,22 +53,43 @@ namespace User.API.Controllers
         {
             try
             {
-                // El método UserLogin ahora devuelve tanto el access token como el refresh token
-                var tokenResponse = await _userService.UserLogin(request.Email, request.Password);
-                if (tokenResponse == null)
+                var loginSuccess = await _userService.UserLogin(request.Email, request.Password);
+
+                if (!loginSuccess)
                 {
                     return Unauthorized(new { message = "Invalid credentials" });
                 }
 
-                // Retornar la respuesta con los tokens
-                return Ok(tokenResponse);
+                // Retornar una respuesta indicando que se envió el código de verificación
+                return Ok(new { message = "Verification code sent to your email." });
             }
             catch (Exception ex)
             {
-                // Puedes manejar otras excepciones si es necesario
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
             }
         }
+
+        [HttpPost("verify-code")]
+        public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeRequest request)
+        {
+            try
+            {
+                var tokenResponse = await _userService.VerifyCode(request.Email, request.VerificationCode);
+
+                // Si todo está correcto, devolvemos los tokens
+                return Ok(tokenResponse);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
+            }
+        }
+
+
 
         [HttpPost("refresh-token")]
         public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)

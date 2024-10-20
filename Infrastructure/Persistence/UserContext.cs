@@ -6,8 +6,9 @@ namespace UserInfrastructure.Persistence
     public class UserContext : DbContext
     {
         public DbSet<User> Users { get; set; }
-
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<VerificationCode> VerificationCodes { get; set; }
+
         public UserContext(DbContextOptions<UserContext> options) : base(options) { }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -30,20 +31,42 @@ namespace UserInfrastructure.Persistence
                 entity.Property(u => u.BirthDate).IsRequired();
                 entity.Property(u => u.Phone).IsRequired();
 
+                entity.HasMany(u => u.RefreshTokens)
+                      .WithOne(rt => rt.User)
+                      .HasForeignKey(rt => rt.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasMany(u => u.VerificationCodes)
+                      .WithOne(vc => vc.User)
+                      .HasForeignKey(vc => vc.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
+
+
             modelBuilder.Entity<RefreshToken>(entity =>
             {
-                entity.HasKey(e => e.Id); // Clave primaria
-                entity.Property(e => e.Token).IsRequired(); // Token es requerido
-                entity.Property(e => e.ExpirationDate).IsRequired(); // ExpirationDate es requerido
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Token).IsRequired();
+                entity.Property(e => e.ExpirationDate).IsRequired();
 
-                // Relación muchos-a-uno con la tabla Users
                 entity.HasOne(rt => rt.User)
-                      .WithMany(u => u.RefreshTokens)  // Un usuario puede tener múltiples refresh tokens
-                      .HasForeignKey(rt => rt.UserId)  // Clave foránea en RefreshToken que apunta a User
-                      .OnDelete(DeleteBehavior.Cascade); // Si se borra el usuario, también se eliminan los tokens
+                      .WithMany(u => u.RefreshTokens)
+                      .HasForeignKey(rt => rt.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
 
+            modelBuilder.Entity<VerificationCode>(entity =>
+            {
+                entity.ToTable("VerificationCode");
+                entity.HasKey(vc => vc.Id);
+                entity.Property(vc => vc.Code).IsRequired();
+                entity.Property(vc => vc.ExpirationDate).IsRequired();
+                entity.Property(vc => vc.IsUsed).IsRequired().HasDefaultValue(false);
 
+                entity.HasOne(vc => vc.User)
+                      .WithMany(u => u.VerificationCodes)
+                      .HasForeignKey(vc => vc.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

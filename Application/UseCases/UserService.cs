@@ -15,16 +15,19 @@ namespace Application.UseCases
         private readonly IUserMapper _userMapper;
 
         private readonly IPasswordService _passwordService;
-
+        private readonly IEmailService _emailService;
         private readonly IJwtService _jwtService;
+        private readonly IVerificationService _verificationService;
 
-        public UserService(IUserCommand userCommand, IUserQuery userQuery, IUserMapper userMapper, IPasswordService passwordService, IJwtService jwtService)
+        public UserService(IUserCommand userCommand, IUserQuery userQuery, IUserMapper userMapper, IPasswordService passwordService, IJwtService jwtService, IEmailService emailService, IVerificationService verificationService)
         {
             _userCommand = userCommand;
             _userQuery = userQuery;
             _userMapper = userMapper;
             _passwordService = passwordService;
             _jwtService = jwtService;
+            _emailService = emailService;
+            _verificationService = verificationService;
         }
 
         public async Task<UserResponse> CreateUser(UserRequest user)
@@ -57,24 +60,56 @@ namespace Application.UseCases
             return await _userMapper.GetUserResponse(userRetrived);
 
         }
-        public async Task<TokenResponse> UserLogin(string email, string password)
+
+        public async Task<bool> UserLogin(string email, string password)
         {
+            // 1. Verificar las credenciales del usuario
             var user = await _userQuery.GetUserEmail(email);
             if (user == null || !_passwordService.VerifyPassword(password, user.Password))
             {
-                return null; // Credenciales incorrectas
+                return false; // Credenciales incorrectas
             }
 
-            // Generar el Access Token si las credenciales son correctas
-            var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email);
+            // 2. Generar el código de verificación (usamos un código de 6 dígitos)
+            var verificationCode = _verificationService.GenerateVerificationCode();
 
-            // Generar el Refresh Token
+            // 3. Guardar el código de verificación en la base de datos
+            await _userCommand.SaveVerificationCode(user.Id, verificationCode);
+
+            // 4. Enviar el código de verificación por correo electrónico
+            await _emailService.SendVerificationCode(user.Email, verificationCode);
+
+            // Devolver true para indicar que se ha enviado el código de verificación
+            return true;
+        }
+
+        public async Task<TokenResponse> VerifyCode(string email, string verificationCode)
+        {
+            // 1. Obtener el usuario por el email
+            var user = await _userQuery.GetUserEmail(email);
+            if (user == null)
+            {
+                throw new UnauthorizedAccessException("User not found.");
+            }
+
+            // 2. Obtener el código de verificación almacenado en la base de datos
+            var storedCode = await _userQuery.GetVerificationCode(user.Id, verificationCode);
+            if (storedCode == null || storedCode.IsUsed || storedCode.ExpirationDate < DateTime.UtcNow)
+            {
+                throw new UnauthorizedAccessException("Invalid or expired verification code.");
+            }
+
+            // 3. Marcar el código como usado
+            await _userCommand.MarkCodeAsUsed(storedCode);
+
+            // 4. Generar tokens de acceso y refresh
+            var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email);
             var refreshToken = _jwtService.GenerateRefreshToken();
 
-            // Guardar el Refresh Token en la base de datos
+            // 5. Actualizar el refresh token en la base de datos
             await _userCommand.UpdateRefreshToken(user.Id, refreshToken);
 
-            // Devolver ambos tokens en la respuesta
+            // 6. Devolver los nuevos tokens
             return new TokenResponse
             {
                 AccessToken = accessToken,
@@ -101,10 +136,6 @@ namespace Application.UseCases
                 // Token expirado
                 throw new UnauthorizedAccessException("Refresh token has expired.");
             }
-
-            // Aquí podrías agregar más validaciones si es necesario, como:
-            // - Validar que el usuario sigue activo (ejemplo: !user.Deleted)
-
             // Generar un nuevo access token y refresh token
             var newAccessToken = _jwtService.GenerateAccessToken(userId, principal.FindFirst(ClaimTypes.Email)?.Value);
             var newRefreshToken = _jwtService.GenerateRefreshToken();

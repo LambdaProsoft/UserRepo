@@ -18,6 +18,6 @@
 
 
         public ICollection<RefreshToken> RefreshTokens { get; set; }
-
+        public ICollection<VerificationCode> VerificationCodes { get; set; }
     }
 }

@@ -4,6 +4,5 @@
     {
         public string Email { get; set; }
         public int Phone { get; set; }
-        public string Alias { get; set; }
     }
 }

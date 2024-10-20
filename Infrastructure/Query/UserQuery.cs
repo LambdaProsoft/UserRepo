@@ -60,5 +60,11 @@ namespace UserInfrastructure.Query
 
             return tokenEntity;
         }
+
+        public async Task<VerificationCode> GetVerificationCode(int userId, string verificationCode)
+        {
+            return await _context.VerificationCodes
+                .FirstOrDefaultAsync(vc => vc.UserId == userId && vc.Code == verificationCode && !vc.IsUsed);
+        }
     }
 }

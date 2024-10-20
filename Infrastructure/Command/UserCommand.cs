@@ -76,6 +76,30 @@ namespace Infrastructure.Command
             await _context.SaveChangesAsync();
         }
 
+        public async Task SaveVerificationCode(int userId, string verificationCode)
+        {
+            var verificationCodeEntity = new VerificationCode
+            {
+                UserId = userId,
+                Code = verificationCode,
+                ExpirationDate = DateTime.UtcNow.AddMinutes(10), // expiración 10 minutos
+                IsUsed = false
+            };
+
+            _context.VerificationCodes.Add(verificationCodeEntity);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task MarkCodeAsUsed(VerificationCode verificationCode)
+        {
+            // Cambiar el estado del código a usado
+            verificationCode.IsUsed = true;
+
+            // Actualizar el código en la base de datos
+            _context.VerificationCodes.Update(verificationCode);
+            await _context.SaveChangesAsync();
+        }
+
         //public async Task UpdateRefreshToken(int userId, string newRefreshToken)
         //{
         //    var tokenEntity = await _context.RefreshTokens
