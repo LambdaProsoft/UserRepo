@@ -13,13 +13,14 @@ namespace Application.UseCases
         private readonly IUserCommand _userCommand;
         private readonly IUserQuery _userQuery;
         private readonly IUserMapper _userMapper;
+        private readonly IAcountHttpService _acountHttpService;
 
         private readonly IPasswordService _passwordService;
         private readonly IEmailService _emailService;
         private readonly IJwtService _jwtService;
         private readonly IVerificationService _verificationService;
 
-        public UserService(IUserCommand userCommand, IUserQuery userQuery, IUserMapper userMapper, IPasswordService passwordService, IJwtService jwtService, IEmailService emailService, IVerificationService verificationService)
+        public UserService(IUserCommand userCommand, IUserQuery userQuery, IUserMapper userMapper, IPasswordService passwordService, IJwtService jwtService, IEmailService emailService, IVerificationService verificationService,IAcountHttpService acountHttpService)
         {
             _userCommand = userCommand;
             _userQuery = userQuery;
@@ -28,6 +29,7 @@ namespace Application.UseCases
             _jwtService = jwtService;
             _emailService = emailService;
             _verificationService = verificationService;
+            _acountHttpService = acountHttpService;
         }
 
         public async Task<UserResponse> CreateUser(UserRequest user)
@@ -57,6 +59,16 @@ namespace Application.UseCases
 
             await _userCommand.CreateUser(newUser);
             var userRetrived = await _userQuery.GetUserById(newUser.Id);
+
+            var accountCreateRequest = new AccountCreateRequest
+            {
+                AccountType = 1,
+                Currency = 1,
+                User = userRetrived.Id
+            };
+            await _acountHttpService.CreateAccount(accountCreateRequest);
+
+
             return await _userMapper.GetUserResponse(userRetrived);
 
         }
