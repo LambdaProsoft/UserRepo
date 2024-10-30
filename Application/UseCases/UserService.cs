@@ -66,7 +66,9 @@ namespace Application.UseCases
                 Currency = 1,
                 User = userRetrived.Id
             };
-            await _acountHttpService.CreateAccount(accountCreateRequest);
+
+            // Debemos pasarle un token de autenticacion.
+            await _acountHttpService.CreateAccount("token", accountCreateRequest);
 
 
             return await _userMapper.GetUserResponse(userRetrived);

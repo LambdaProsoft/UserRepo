@@ -10,6 +10,6 @@ namespace Application.Interfaces
 {
     public interface IAcountHttpService
     {
-         Task<AccountResponse> CreateAccount(AccountCreateRequest request);
+        Task<AccountResponse> CreateAccount(string token, AccountCreateRequest request);
     }
 }
