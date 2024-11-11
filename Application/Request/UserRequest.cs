@@ -12,5 +12,9 @@
         public string Adress { get; set; }
         public DateTime BirthDate { get; set; }
         public int Phone { get; set; }
+
+        //Modificacion para crear cuenta
+        public int Currency { get; set; }
+        public int AccountType { get; set; }
     }
 }

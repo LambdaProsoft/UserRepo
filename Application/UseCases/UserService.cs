@@ -62,13 +62,15 @@ namespace Application.UseCases
 
             var accountCreateRequest = new AccountCreateRequest
             {
-                AccountType = 1,
-                Currency = 1,
+                AccountType = user.AccountType,
+                Currency = user.Currency,
                 User = userRetrived.Id
             };
 
-            // Debemos pasarle un token de autenticacion.
-            await _acountHttpService.CreateAccount("token", accountCreateRequest);
+            // Access Token para crear cuenta
+            string token = _jwtService.GenerateAccessToken(userRetrived.Id, userRetrived.Email);
+
+            await _acountHttpService.CreateAccount(token, accountCreateRequest);
 
 
             return await _userMapper.GetUserResponse(userRetrived);

@@ -40,7 +40,7 @@ namespace User.API.Controllers
             try
             {
                 var result = await _userService.CreateUser(request);
-                return new JsonResult(result) { StatusCode = 200 };
+                return new JsonResult(result) { StatusCode = 201 };
             }
             catch (BadRequestException ex)
             {
@@ -70,6 +70,7 @@ namespace User.API.Controllers
         }
 
         [HttpPost("verify-code")]
+        [ProducesResponseType(typeof(TokenResponse), 201)]
         public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeRequest request)
         {
             try

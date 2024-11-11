@@ -24,6 +24,18 @@ builder.Services.AddHttpClient<IAcountHttpService,AccountHttpService>(client =>
     client.BaseAddress = new Uri("https://localhost");
 });
 
+// Configurar CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
+
 
 var connectionString = builder.Configuration["ConnectionString"];
 builder.Services.AddDbContext<UserContext>(options => options.UseSqlServer(connectionString));
@@ -81,6 +93,8 @@ if (app.Environment.IsDevelopment())
 //agregado
 app.UseAuthentication();
 app.UseRouting();
+
+app.UseCors("AllowAll");
 
 
 app.UseHttpsRedirection();
